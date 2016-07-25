@@ -88,69 +88,13 @@ func IsTerminal(state *mesos.TaskState) bool {
 	}
 }
 
-type svcExecutor struct {
-}
-
-func (e *svcExecutor) Registered(driver exec.ExecutorDriver, execInfo *mesos.ExecutorInfo, fwinfo *mesos.FrameworkInfo, slaveInfo *mesos.SlaveInfo) {
-	fmt.Println("Registered Executor on slave ", slaveInfo.GetHostname())
-}
-
-func (e *svcExecutor) Reregistered(driver exec.ExecutorDriver, slaveInfo *mesos.SlaveInfo) {
-	fmt.Println("Re-registered Executor on slave ", slaveInfo.GetHostname())
-}
-
-func (e *svcExecutor) Disconnected(exec.ExecutorDriver) {
-	fmt.Println("Executor disconnected.")
-}
-
-func (e *svcExecutor) LaunchTask(driver exec.ExecutorDriver, taskInfo *mesos.TaskInfo) {
-	fmt.Println("Launching task", taskInfo.GetName(), "with command", taskInfo.Command.GetValue())
-
-	runStatus := &mesos.TaskStatus{
-		TaskId: taskInfo.GetTaskId(),
-		State:  mesos.TaskState_TASK_STARTING.Enum(),
-	}
-	_, err := driver.SendStatusUpdate(runStatus)
-	if err != nil {
-		fmt.Println("Got error", err)
-	}
-}
-
-func (e *svcExecutor) KillTask(exec.ExecutorDriver, *mesos.TaskID) {
-	fmt.Println("Kill task")
-}
-
-func (e *svcExecutor) FrameworkMessage(driver exec.ExecutorDriver, msg string) {
-	fmt.Println("Got framework message: ", msg)
-}
-
-func (e *svcExecutor) Shutdown(exec.ExecutorDriver) {
-	fmt.Println("Shutting down the executor")
-}
-
-func (e *svcExecutor) Error(driver exec.ExecutorDriver, err string) {
-	fmt.Println("Got error message:", err)
-}
-
-func sendTaskStatusUpdate(driver exec.ExecutorDriver, taskId string, state mesos.TaskState) (mesos.Status, error) {
-	taskStatus := mesos.TaskStatus{
-		TaskId: &mesos.TaskID{Value: proto.String(taskId)},
-		State:  &state,
-	}
-	driverStatus, err := driver.SendStatusUpdate(&taskStatus)
-	if err != nil {
-		fmt.Printf("Send task status error, driverStatus: %v, err: %v\n", driverStatus.String(), err)
-	}
-	return driverStatus, err
-}
-
 type svcScheduler struct {
 	tasksCreated int
 	tasksRunning int
 
 	taskQueue *list.List
 
-	//executor *mesos.ExecutorInfo
+	executor *mesos.ExecutorInfo
 
 	// This channel is close when the program receives an interrupt,
 	// signalling that the program should shut down
@@ -166,22 +110,12 @@ type Task struct {
 	image string
 }
 
-func newSvcScheduler() *svcScheduler {
+func newSvcScheduler(exec *mesos.ExecutorInfo) *svcScheduler {
 	s := &svcScheduler{
 		taskQueue: list.New(),
-
-		//executor: &mesos.ExecutorInfo{
-		//	ExecutorId: &mesos.ExecutorID{
-		//		Value: proto.String("test-executor"),
-		//	},
-		//	Command: &mesos.CommandInfo{
-		//		Value: proto.String("mkdir a"),
-		//	},
-		//	Name: proto.String("svc"),
-		//},
-
-		shutdown: make(chan struct{}),
-		done:     make(chan struct{}),
+		executor:  exec,
+		shutdown:  make(chan struct{}),
+		done:      make(chan struct{}),
 	}
 	return s
 }
@@ -195,30 +129,31 @@ func (s *svcScheduler) newSvcTask(task Task, offer *mesos.Offer) *mesos.TaskInfo
 		Value: proto.String(fmt.Sprintf("svc-%d", s.tasksCreated)),
 	}
 
-	containerType := mesos.ContainerInfo_DOCKER
-	network := mesos.ContainerInfo_DockerInfo_BRIDGE
-	portmappings := []*mesos.ContainerInfo_DockerInfo_PortMapping{
-		&mesos.ContainerInfo_DockerInfo_PortMapping{
-			HostPort:      proto.Uint32(31004),
-			ContainerPort: proto.Uint32(80),
-			Protocol:      proto.String("tcp"),
-		},
-	}
+	//containerType := mesos.ContainerInfo_DOCKER
+	//network := mesos.ContainerInfo_DockerInfo_BRIDGE
+	//portmappings := []*mesos.ContainerInfo_DockerInfo_PortMapping{
+	//	&mesos.ContainerInfo_DockerInfo_PortMapping{
+	//		HostPort:      proto.Uint32(31004),
+	//		ContainerPort: proto.Uint32(80),
+	//		Protocol:      proto.String("tcp"),
+	//	},
+	//}
 	taskInfo = &mesos.TaskInfo{
-		Name:    proto.String("task-" + taskID.GetValue()),
-		TaskId:  taskID,
-		SlaveId: offer.SlaveId,
-		Container: &mesos.ContainerInfo{
-			Type: &containerType,
-			Docker: &mesos.ContainerInfo_DockerInfo{
-				Image:        proto.String(task.image),
-				Network:      &network,
-				PortMappings: portmappings,
-			},
-		},
-		Command: &mesos.CommandInfo{
-			Shell: proto.Bool(false),
-		},
+		Name:     proto.String("task-" + taskID.GetValue()),
+		TaskId:   taskID,
+		SlaveId:  offer.SlaveId,
+		Executor: s.executor,
+		//Container: &mesos.ContainerInfo{
+		//	Type: &containerType,
+		//	Docker: &mesos.ContainerInfo_DockerInfo{
+		//		Image:        proto.String(task.image),
+		//		Network:      &network,
+		//		PortMappings: portmappings,
+		//	},
+		//},
+		//Command: &mesos.CommandInfo{
+		//	Shell: proto.Bool(false),
+		//},
 		Resources: []*mesos.Resource{
 			mesosutil.NewScalarResource("cpus", task.cpu),
 			mesosutil.NewScalarResource("mem", task.mem),
@@ -329,7 +264,24 @@ func main() {
 
 	flag.Parse()
 
-	scheduler := newSvcScheduler()
+	executorUris := []*mesos.CommandInfo_URI{
+		{
+			Value:      proto.String("/opt/haoran/tmpGoWork/src/github.com/executorserver/executor"),
+			Executable: proto.Bool(true),
+		},
+	}
+
+	executor := &mesos.ExecutorInfo{
+		ExecutorId: mesosutil.NewExecutorID("default"),
+		Name:       proto.String("Test Executor (Go)"),
+		Source:     proto.String("go_test"),
+		Command: &mesos.CommandInfo{
+			Value: proto.String("./executor"),
+			Uris:  executorUris,
+		},
+	}
+
+	scheduler := newSvcScheduler(executor)
 	task := Task{
 		cpu:   1.0,
 		mem:   128,
