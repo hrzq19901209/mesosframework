@@ -2,6 +2,7 @@ package main
 
 import (
 	"container/list"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/golang/protobuf/proto"
@@ -23,6 +24,27 @@ const (
 var (
 	defaultFilter = &mesos.Filters{RefuseSeconds: proto.Float64(1)}
 )
+
+func getOfferScalar(offer *mesos.Offer, name string) float64 {
+	resources := mesosutil.FilterResources(offer.Resources, func(res *mesos.Resource) bool {
+		return res.GetName() == name
+	})
+
+	value := 0.0
+	for _, res := range resources {
+		value += res.GetScalar().GetValue()
+	}
+
+	return value
+}
+
+func getOfferCpu(offer *mesos.Offer) float64 {
+	return getOfferScalar(offer, "cpus")
+}
+
+func getOfferMem(offer *mesos.Offer) float64 {
+	return getOfferScalar(offer, "mem")
+}
 
 func checkOffer(task Task, offer *mesos.Offer) bool {
 	var cpusum, memsum float64
@@ -47,7 +69,7 @@ func checkOffer(task Task, offer *mesos.Offer) bool {
 		}
 	}
 
-	for cpusum >= task.cpu && memsum > task.mem {
+	for cpusum >= task.Cpus && memsum > task.Mem {
 		return true
 	}
 	return false
@@ -105,9 +127,12 @@ type svcScheduler struct {
 }
 
 type Task struct {
-	cpu   float64
-	mem   float64
-	image string
+	Cpus          float64 `json:"cpus"`
+	Mem           float64 `json:"mem"`
+	Image         string  `json:"image"`
+	ContainerName string  `json:"containerName"`
+	Port          string  `json:"port"`
+	Sec           int     `json:sec`
 }
 
 func newSvcScheduler(exec *mesos.ExecutorInfo) *svcScheduler {
@@ -138,6 +163,13 @@ func (s *svcScheduler) newSvcTask(task Task, offer *mesos.Offer) *mesos.TaskInfo
 	//		Protocol:      proto.String("tcp"),
 	//	},
 	//}
+
+	b, err := json.Marshal(task)
+	if err != nil {
+		log.Printf("json marshal error: %s", err)
+		panic(err)
+	}
+
 	taskInfo = &mesos.TaskInfo{
 		Name:     proto.String("task-" + taskID.GetValue()),
 		TaskId:   taskID,
@@ -155,9 +187,10 @@ func (s *svcScheduler) newSvcTask(task Task, offer *mesos.Offer) *mesos.TaskInfo
 		//	Shell: proto.Bool(false),
 		//},
 		Resources: []*mesos.Resource{
-			mesosutil.NewScalarResource("cpus", task.cpu),
-			mesosutil.NewScalarResource("mem", task.mem),
+			mesosutil.NewScalarResource("cpus", task.Cpus),
+			mesosutil.NewScalarResource("mem", task.Mem),
 		},
+		Data: b,
 	}
 	return taskInfo
 }
@@ -194,12 +227,18 @@ func (s *svcScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*me
 		}
 
 		tasks := []*mesos.TaskInfo{}
-		task := s.taskQueue.Front()
-		if task != nil {
-			if checkOffer(task.Value.(Task), offer) {
-				taskInfo := s.newSvcTask(task.Value.(Task), offer)
+		remainingCpus := getOfferCpu(offer)
+		remainingMem := getOfferMem(offer)
+
+		e := s.taskQueue.Front()
+		if e != nil {
+			task := e.Value.(Task)
+			if task.Cpus <= remainingCpus &&
+				task.Mem <= remainingMem {
+
+				taskInfo := s.newSvcTask(task, offer)
 				tasks = append(tasks, taskInfo)
-				s.taskQueue.Remove(task)
+				s.taskQueue.Remove(e)
 			}
 		}
 
@@ -283,9 +322,12 @@ func main() {
 
 	scheduler := newSvcScheduler(executor)
 	task := Task{
-		cpu:   1.0,
-		mem:   128,
-		image: "nginx",
+		Cpus:          2.0,
+		Mem:           1024,
+		Image:         "testmesos",
+		Port:          "31226",
+		ContainerName: "myTest",
+		Sec:           30,
 	}
 
 	scheduler.taskQueue.PushBack(task)
