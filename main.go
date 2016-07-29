@@ -19,6 +19,8 @@ const (
 	taskCPUs        = 0.1
 	taskMem         = 32.0
 	shutdownTimeout = time.Duration(1) * time.Second
+	CMD             = "./sohu_docker_executor"
+	ExecutorPath    = "/opt/haoran/tmpGoWork/src/github.com/executorserver/sohu_docker_executor"
 )
 
 var (
@@ -230,15 +232,19 @@ func (s *svcScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*me
 		remainingCpus := getOfferCpu(offer)
 		remainingMem := getOfferMem(offer)
 
-		e := s.taskQueue.Front()
-		if e != nil {
+		for e := s.taskQueue.Front(); e != nil; {
 			task := e.Value.(Task)
 			if task.Cpus <= remainingCpus &&
 				task.Mem <= remainingMem {
-
 				taskInfo := s.newSvcTask(task, offer)
 				tasks = append(tasks, taskInfo)
+				remainingCpus -= task.Cpus
+				remainingMem -= task.Mem
+				t := e.Next()
 				s.taskQueue.Remove(e)
+				e = t
+			} else {
+				e = e.Next()
 			}
 		}
 
@@ -305,7 +311,7 @@ func main() {
 
 	executorUris := []*mesos.CommandInfo_URI{
 		{
-			Value:      proto.String("/opt/haoran/tmpGoWork/src/github.com/executorserver/executor"),
+			Value:      proto.String(ExecutorPath),
 			Executable: proto.Bool(true),
 		},
 	}
@@ -315,7 +321,7 @@ func main() {
 		Name:       proto.String("Test Executor (Go)"),
 		Source:     proto.String("go_test"),
 		Command: &mesos.CommandInfo{
-			Value: proto.String("./executor"),
+			Value: proto.String(CMD),
 			Uris:  executorUris,
 		},
 	}
@@ -323,14 +329,22 @@ func main() {
 	scheduler := newSvcScheduler(executor)
 	task := Task{
 		Cpus:          2.0,
-		Mem:           1024,
-		Image:         "testmesos",
+		Mem:           2048,
+		Image:         "nginx",
 		Port:          "31226",
-		ContainerName: "myTest",
+		ContainerName: "sohu-docker-nginx-1",
 		Sec:           30,
 	}
-
+	task1 := Task{
+		Cpus:          2.0,
+		Mem:           3072,
+		Image:         "nginx",
+		Port:          "31227",
+		ContainerName: "sohu-docker-nginx-2",
+		Sec:           30,
+	}
 	scheduler.taskQueue.PushBack(task)
+	scheduler.taskQueue.PushBack(task1)
 	driver, err := sched.NewMesosSchedulerDriver(sched.DriverConfig{
 		Master: *master,
 		Framework: &mesos.FrameworkInfo{
