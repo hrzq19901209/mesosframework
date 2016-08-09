@@ -313,22 +313,10 @@ func main() {
 		panic(err)
 	}
 
-	//	body, err := cli.ContainerStats(context.Background(), "b25123a90b00", true)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	defer body.Close()
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	content, err := ioutil.ReadAll(body)
-	//	log.Println(content)
-	//	log.Println("OK")
-	//	log.Println(string(content))
 	showAll := true
 	opts := statsOptions{
 		all:      true,
-		noStream: true,
+		noStream: false,
 	}
 
 	closeChan := make(chan error)
