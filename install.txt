@@ -1,0 +1,48 @@
+/opt/haoran/GO/src/github.com/docker/docker/api/common.go:18:2: cannot find package "github.com/docker/libtrust" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/libtrust (vendor tree)
+    /usr/local/go/src/github.com/docker/libtrust (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/libtrust (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:33:2: cannot find package "github.com/docker/notary/client" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/notary/client (vendor tree)
+    /usr/local/go/src/github.com/docker/notary/client (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/notary/client (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:34:2: cannot find package "github.com/docker/notary/passphrase" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/notary/passphrase (vendor tree)
+    /usr/local/go/src/github.com/docker/notary/passphrase (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/notary/passphrase (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:35:2: cannot find package "github.com/docker/notary/trustmanager" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/notary/trustmanager (vendor tree)
+    /usr/local/go/src/github.com/docker/notary/trustmanager (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/notary/trustmanager (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:36:2: cannot find package "github.com/docker/notary/trustpinning" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/notary/trustpinning (vendor tree)
+    /usr/local/go/src/github.com/docker/notary/trustpinning (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/notary/trustpinning (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:37:2: cannot find package "github.com/docker/notary/tuf/data" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/notary/tuf/data (vendor tree)
+    /usr/local/go/src/github.com/docker/notary/tuf/data (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/notary/tuf/data (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:38:2: cannot find package "github.com/docker/notary/tuf/signed" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/notary/tuf/signed (vendor tree)
+    /usr/local/go/src/github.com/docker/notary/tuf/signed (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/notary/tuf/signed (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:39:2: cannot find package "github.com/docker/notary/tuf/store" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/docker/notary/tuf/store (vendor tree)
+    /usr/local/go/src/github.com/docker/notary/tuf/store (from $GOROOT)
+    /opt/haoran/GO/src/github.com/docker/notary/tuf/store (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/cli/flagerrors.go:6:2: cannot find package "github.com/spf13/cobra" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/spf13/cobra (vendor tree)
+    /usr/local/go/src/github.com/spf13/cobra (from $GOROOT)
+    /opt/haoran/GO/src/github.com/spf13/cobra (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/api/client/trust.go:40:2: cannot find package "github.com/spf13/pflag" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/spf13/pflag (vendor tree)
+    /usr/local/go/src/github.com/spf13/pflag (from $GOROOT)
+    /opt/haoran/GO/src/github.com/spf13/pflag (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/layer/layer_store.go:17:2: cannot find package "github.com/vbatts/tar-split/tar/asm" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/vbatts/tar-split/tar/asm (vendor tree)
+    /usr/local/go/src/github.com/vbatts/tar-split/tar/asm (from $GOROOT)
+    /opt/haoran/GO/src/github.com/vbatts/tar-split/tar/asm (from $GOPATH)
+/opt/haoran/GO/src/github.com/docker/docker/daemon/graphdriver/driver.go:11:2: cannot find package "github.com/vbatts/tar-split/tar/storage" in any of:
+    /opt/haoran/GO/src/github.com/docker/docker/vendor/github.com/vbatts/tar-split/tar/storage (vendor tree)
+    /usr/local/go/src/github.com/vbatts/tar-split/tar/storage (from $GOROOT)
+    /opt/haoran/GO/src/github.com/vbatts/tar-split/tar/storage (from $GOPATH)

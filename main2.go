@@ -216,7 +216,6 @@ func (s *svcScheduler) Disconnected(sched.SchedulerDriver) {
 
 func (s *svcScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	log.Printf("Received %d resource offers", len(offers))
-	time.Sleep(time.Second * 10)
 	for _, offer := range offers {
 		select {
 		case <-s.shutdown:
@@ -232,8 +231,7 @@ func (s *svcScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*me
 		tasks := []*mesos.TaskInfo{}
 		remainingCpus := getOfferCpu(offer)
 		//remainingMem := getOfferMem(offer)
-
-		log.Println("Cpus:", remainingCpus, "offerId:", offer.Id)
+		log.Println("Cpus:", remainingCpus, "OfferId:", offer.Id)
 
 		//for e := s.taskQueue.Front(); e != nil; {
 		//	task := e.Value.(Task)
@@ -335,7 +333,7 @@ func main() {
 		Mem:           2048,
 		Image:         "nginx",
 		Port:          "31226",
-		ContainerName: "sohu-docker-nginx-3",
+		ContainerName: "sohu-docker-nginx-5",
 		Sec:           30,
 	}
 	task1 := Task{
@@ -343,7 +341,7 @@ func main() {
 		Mem:           3072,
 		Image:         "nginx",
 		Port:          "31227",
-		ContainerName: "sohu-docker-nginx-4",
+		ContainerName: "sohu-docker-nginx-6",
 		Sec:           30,
 	}
 	scheduler.taskQueue.PushBack(task)
