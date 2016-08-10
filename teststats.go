@@ -24,6 +24,11 @@ import (
 // own handle functions of each type of events
 type eventProcessor func(event eventtypes.Message, err error) error
 
+type eventHandler struct {
+	handlers map[string]func(eventtypes.Message)
+	mu       sync.Mutex
+}
+
 type EventHandler interface {
 	Handle(action string, h func(eventtypes.Message))
 	Watch(c <-chan eventtypes.Message)
@@ -32,11 +37,6 @@ type EventHandler interface {
 // InitEventHandler initializes and returns an EventHandler
 func InitEventHandler() EventHandler {
 	return &eventHandler{handlers: make(map[string]func(eventtypes.Message))}
-}
-
-type eventHandler struct {
-	handlers map[string]func(eventtypes.Message)
-	mu       sync.Mutex
 }
 
 func (w *eventHandler) Handle(action string, h func(eventtypes.Message)) {
