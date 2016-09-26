@@ -305,7 +305,7 @@ func (s *svcScheduler) Error(_ sched.SchedulerDriver, err string) {
 	log.Printf("Receiving an error: %s", err)
 }
 
-func main() {
+func test() {
 	master := flag.String("master", "10.16.51.127:5050", "Location of leading Mesos master")
 
 	flag.Parse()
@@ -384,4 +384,21 @@ func main() {
 	}
 
 	log.Println("Exiting...")
+}
+
+func main() {
+	task1 := Task{
+		Cpus:          2.0,
+		Mem:           3072,
+		Image:         "nginx",
+		Port:          "31227",
+		ContainerName: "sohu-docker-nginx-6",
+		Sec:           30,
+	}
+
+	b, err := json.Marshal(task1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(b))
 }

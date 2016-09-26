@@ -10,8 +10,8 @@ import (
 	"github.com/mesos/mesos-go/mesosutil"
 	sched "github.com/mesos/mesos-go/scheduler"
 	"log"
-	"os"
-	"os/signal"
+	_ "os"
+	_ "os/signal"
 	"time"
 )
 
@@ -19,8 +19,8 @@ const (
 	taskCPUs        = 0.1
 	taskMem         = 32.0
 	shutdownTimeout = time.Duration(1) * time.Second
-	CMD             = "./sohu_docker_executor"
-	ExecutorPath    = "/opt/haoran/tmpGoWork/src/github.com/executorserver/sohu_docker_executor"
+	CMD             = "./sohu_docker_executor_back"
+	ExecutorPath    = "/opt/haoran/tmpGoWork/src/github.com/executorserver/sohu_docker_executor_back"
 )
 
 var (
@@ -129,12 +129,14 @@ type svcScheduler struct {
 }
 
 type Task struct {
-	Cpus          float64 `json:"cpus"`
-	Mem           float64 `json:"mem"`
-	Image         string  `json:"image"`
-	ContainerName string  `json:"containerName"`
-	Port          string  `json:"port"`
-	Sec           int     `json:sec`
+	Cpus          float64  `json:"cpus"`
+	Mem           float64  `json:"mem"`
+	Image         string   `json:"image"`
+	ContainerName string   `json:"containerName"`
+	Port          string   `json:"port"`
+	Volume        []string `json:"volume"`
+	NetworkMode   string   `json:"networkmode"`
+	Cmd           []string `json:"cmd"`
 }
 
 func newSvcScheduler(exec *mesos.ExecutorInfo) *svcScheduler {
@@ -167,6 +169,7 @@ func (s *svcScheduler) newSvcTask(task Task, offer *mesos.Offer) *mesos.TaskInfo
 	//}
 
 	b, err := json.Marshal(task)
+	fmt.Println(string(b))
 	if err != nil {
 		log.Printf("json marshal error: %s", err)
 		panic(err)
@@ -216,7 +219,6 @@ func (s *svcScheduler) Disconnected(sched.SchedulerDriver) {
 
 func (s *svcScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*mesos.Offer) {
 	log.Printf("Received %d resource offers", len(offers))
-	time.Sleep(time.Second * 10)
 	for _, offer := range offers {
 		select {
 		case <-s.shutdown:
@@ -231,25 +233,25 @@ func (s *svcScheduler) ResourceOffers(driver sched.SchedulerDriver, offers []*me
 
 		tasks := []*mesos.TaskInfo{}
 		remainingCpus := getOfferCpu(offer)
-		//remainingMem := getOfferMem(offer)
+		remainingMem := getOfferMem(offer)
 
 		log.Println("Cpus:", remainingCpus, "offerId:", offer.Id)
 
-		//for e := s.taskQueue.Front(); e != nil; {
-		//	task := e.Value.(Task)
-		//	if task.Cpus <= remainingCpus &&
-		//		task.Mem <= remainingMem {
-		//		taskInfo := s.newSvcTask(task, offer)
-		//		tasks = append(tasks, taskInfo)
-		//		remainingCpus -= task.Cpus
-		//		remainingMem -= task.Mem
-		//		t := e.Next()
-		//		s.taskQueue.Remove(e)
-		//		e = t
-		//	} else {
-		//		e = e.Next()
-		//	}
-		//}
+		for e := s.taskQueue.Front(); e != nil; {
+			task := e.Value.(Task)
+			if task.Cpus <= remainingCpus &&
+				task.Mem <= remainingMem {
+				taskInfo := s.newSvcTask(task, offer)
+				tasks = append(tasks, taskInfo)
+				remainingCpus -= task.Cpus
+				remainingMem -= task.Mem
+				t := e.Next()
+				s.taskQueue.Remove(e)
+				e = t
+			} else {
+				e = e.Next()
+			}
+		}
 
 		if len(tasks) == 0 {
 			driver.DeclineOffer(offer.Id, defaultFilter)
@@ -283,12 +285,6 @@ func (s *svcScheduler) FrameworkMessage(
 	message string) {
 
 	log.Println("Getting a framework message")
-	//switch *executorID.Value {
-	//case *s.executor.ExecutorId.Value:
-	//	log.Print("Received framework message from svc")
-	//default:
-	//	log.Printf("Received a framework message from some unknown source: %s", *executorID.Value)
-	//}
 }
 
 func (s *svcScheduler) OfferRescinded(_ sched.SchedulerDriver, offerID *mesos.OfferID) {
@@ -333,26 +329,26 @@ func main() {
 	task := Task{
 		Cpus:          2.0,
 		Mem:           2048,
-		Image:         "nginx",
+		Image:         "server",
 		Port:          "31226",
-		ContainerName: "sohu-docker-nginx-3",
-		Sec:           30,
-	}
-	task1 := Task{
-		Cpus:          2.0,
-		Mem:           3072,
-		Image:         "nginx",
-		Port:          "31227",
-		ContainerName: "sohu-docker-nginx-4",
-		Sec:           30,
+		ContainerName: "",
+		Volume:        []string{"/var/log/server:/var/log/server"},
+		NetworkMode:   "host",
+		Cmd:           []string{"--port=1314"},
 	}
 	scheduler.taskQueue.PushBack(task)
-	scheduler.taskQueue.PushBack(task1)
+
 	driver, err := sched.NewMesosSchedulerDriver(sched.DriverConfig{
 		Master: *master,
 		Framework: &mesos.FrameworkInfo{
-			Name: proto.String("SVC"),
-			User: proto.String(""),
+			Name:            proto.String("SVC"),
+			User:            proto.String(""),
+			Checkpoint:      proto.Bool(true),
+			FailoverTimeout: proto.Float64(3600 * 24 * 7),
+
+			Id: &mesos.FrameworkID{
+				Value: proto.String("2ad17b28-1cb8-4039-a6b1-820d84455d98-0010"),
+			},
 		},
 		Scheduler: scheduler,
 	})
@@ -362,7 +358,7 @@ func main() {
 		return
 	}
 
-	go func() {
+	/*go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt, os.Kill)
 		s := <-c
@@ -379,7 +375,7 @@ func main() {
 		}
 
 		driver.Stop(false)
-	}()
+	}()*/
 
 	if status, err := driver.Run(); err != nil {
 		log.Printf("Framework stopped with status %s and error: %s\n", status.String(), err.Error())
